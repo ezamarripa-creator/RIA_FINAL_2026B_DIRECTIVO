@@ -40,7 +40,7 @@
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cuadro de Mando — Reprobación RIA 2026B | COBAED</title>
+<title>Cuadro de Mando — Reprobación RIA 2025B | COBAED</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
 <style>
@@ -298,7 +298,7 @@
     <div class="logo-badge">C</div>
     <div class="header-titles">
       <h1>Cuadro de Mando Integral · Índices de Reprobación</h1>
-      <p>COBAED — Sistema de Evaluación RIA 2026B</p>
+      <p>COBAED — Sistema de Evaluación RIA 2025B</p>
     </div>
   </div>
   <div class="header-right">
@@ -419,8 +419,24 @@
   <!-- CHARTS ROW 1 -->
   <div class="charts-grid">
     <div class="chart-card">
-      <div class="chart-title"><span class="dot" style="background:var(--danger)"></span>Reprobación por Plantel (%)</div>
-      <div id="chart-plantel" style="height:340px;"></div>
+      <div class="chart-title"><span class="dot" style="background:var(--danger)"></span>Reprobación por Plantel — Promedios por Rubro</div>
+      <div class="table-wrap" style="max-height:340px; overflow-y:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Plantel</th>
+              <th>Cal. 1</th>
+              <th>Cal. 2</th>
+              <th>Cal. 3</th>
+              <th>Prom. Unid.</th>
+              <th>Semestral</th>
+              <th>Proyecto</th>
+              <th>Final</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-plantel-detalle"></tbody>
+        </table>
+      </div>
     </div>
     <div class="chart-card">
       <div class="chart-title"><span class="dot" style="background:var(--accent2)"></span>Distribución de Calificaciones Finales</div>
@@ -432,7 +448,17 @@
   <div class="charts-grid">
     <div class="chart-card">
       <div class="chart-title"><span class="dot" style="background:var(--warn)"></span>Top 10 Materias con Mayor Reprobación</div>
-      <div id="chart-materias" style="height:340px;"></div>
+      <div class="table-wrap" style="max-height:340px; overflow-y:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Materia</th>
+              <th>% Reprobación Final</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-materias-top"></tbody>
+        </table>
+      </div>
     </div>
     <div class="chart-card">
       <div class="chart-title"><span class="dot" style="background:var(--accent3)"></span>Reprobación por Semestre y Turno</div>
@@ -617,32 +643,46 @@ function renderAll(data) {
       rep.length.toLocaleString('es-MX') + ' / ' + valid.length.toLocaleString('es-MX');
   }
 
-  // Chart: reprobación por plantel
+  // Tabla: Reprobación por plantel — promedios por rubro
   const byPlantel = groupBy(data, COL.plantel);
+  const avg = (rows, col) => {
+    if (!col) return null;
+    const vals = rows.map(r => parseFloat(r[col])).filter(v => !isNaN(v));
+    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+  };
+  const fmtAvg = v => v === null ? '—' : v.toFixed(1);
   const plantelData = Object.entries(byPlantel).map(([name, rows]) => {
     const rep = rows.filter(r => parseFloat(r[COL.final]) < 6).length;
-    return { name, total: rows.length, rep, pctVal: rows.length ? rep/rows.length*100 : 0 };
-  }).sort((a,b) => b.pctVal - a.pctVal);
+    return {
+      name,
+      total: rows.length,
+      rep,
+      pctVal: rows.length ? rep / rows.length * 100 : 0,
+      cal1: avg(rows, COL.cal1),
+      cal2: avg(rows, COL.cal2),
+      cal3: avg(rows, COL.cal3),
+      promUni: avg(rows, COL.promUni),
+      semestral: avg(rows, COL.semestral),
+      proyecto: avg(rows, COL.proyecto),
+      final: avg(rows, COL.final),
+    };
+  }).sort((a, b) => {
+    if (a.final === null) return 1;
+    if (b.final === null) return -1;
+    return b.final - a.final;
+  });
 
-  Plotly.newPlot('chart-plantel', [{
-    type: 'bar', orientation: 'h',
-    y: plantelData.map(d => d.name),
-    x: plantelData.map(d => +d.pctVal.toFixed(2)),
-    marker: {
-      color: plantelData.map(d =>
-        d.pctVal >= 10 ? '#f85149' : d.pctVal >= 5 ? '#d29922' : '#3fb950'
-      )
-    },
-    text: plantelData.map(d => d.pctVal.toFixed(1) + '%'),
-    textposition: 'outside',
-    hovertemplate: '<b>%{y}</b><br>Reprobación: %{x:.1f}%<extra></extra>'
-  }], {
-    paper_bgcolor: BG, plot_bgcolor: BG,
-    margin: { l: 150, r: 50, t: 10, b: 30 },
-    xaxis: { gridcolor: GRID, color: TEXT, tickfont: { size: 11 }, ticksuffix: '%' },
-    yaxis: { color: TEXT, tickfont: { size: 11 }, automargin: true },
-    font: { family: fontFamily, color: TEXT }
-  }, PLOTLY_CONFIG);
+  document.getElementById('tabla-plantel-detalle').innerHTML = plantelData.map(d => `
+    <tr>
+      <td>${d.name}</td>
+      <td>${fmtAvg(d.cal1)}</td>
+      <td>${fmtAvg(d.cal2)}</td>
+      <td>${fmtAvg(d.cal3)}</td>
+      <td>${fmtAvg(d.promUni)}</td>
+      <td>${fmtAvg(d.semestral)}</td>
+      <td>${fmtAvg(d.proyecto)}</td>
+      <td style="color:${d.final !== null && d.final < 6 ? 'var(--danger)' : 'var(--accent3)'}">${fmtAvg(d.final)}</td>
+    </tr>`).join('');
 
   // Chart: distribución calificaciones
   const finalVals = data.map(r => parseFloat(r[COL.final])).filter(v => !isNaN(v));
@@ -670,27 +710,32 @@ function renderAll(data) {
     font: { family: fontFamily, color: TEXT }
   }, PLOTLY_CONFIG);
 
-  // Chart: Top 10 materias reprobadas
-  const byMateria = groupBy(reprobados, COL.materia);
-  const materiaTop = Object.entries(byMateria)
-    .map(([name, rows]) => ({ name, count: rows.length }))
-    .sort((a,b) => b.count - a.count).slice(0, 10);
+  // Tabla: Top 10 materias con mayor % de reprobación final
+  // Se agrupa por clave de materia (única) y se muestra el nombre descriptivo
+  const materiaGroupKey = COL.materiaClave || COL.materia;
+  const byMateriaTotal = groupBy(data, materiaGroupKey);
+  const byMateriaRep   = groupBy(reprobados, materiaGroupKey);
+  const materiaTop = Object.entries(byMateriaTotal)
+    .map(([key, rows]) => {
+      const repRows = byMateriaRep[key] || [];
+      const displayName = (COL.materia && rows[0][COL.materia]) || key;
+      return {
+        name: displayName,
+        total: rows.length,
+        rep: repRows.length,
+        pctVal: rows.length ? repRows.length / rows.length * 100 : 0
+      };
+    })
+    .sort((a, b) => b.pctVal - a.pctVal)
+    .slice(0, 10);
 
-  Plotly.newPlot('chart-materias', [{
-    type: 'bar', orientation: 'h',
-    y: materiaTop.map(d => d.name),
-    x: materiaTop.map(d => d.count),
-    marker: { color: '#d29922' },
-    text: materiaTop.map(d => d.count),
-    textposition: 'outside',
-    hovertemplate: '<b>%{y}</b><br>Reprobados: %{x}<extra></extra>'
-  }], {
-    paper_bgcolor: BG, plot_bgcolor: BG,
-    margin: { l: 230, r: 50, t: 10, b: 30 },
-    xaxis: { gridcolor: GRID, color: TEXT, tickfont: { size: 11 } },
-    yaxis: { color: TEXT, tickfont: { size: 11 }, automargin: true },
-    font: { family: fontFamily, color: TEXT }
-  }, PLOTLY_CONFIG);
+  document.getElementById('tabla-materias-top').innerHTML = materiaTop.map(d => {
+    const riesgo = d.pctVal >= 10 ? 'alto' : d.pctVal >= 5 ? 'medio' : 'bajo';
+    return `<tr>
+      <td>${d.name}</td>
+      <td><span class="pct-badge ${riesgo}">${d.pctVal.toFixed(1)}%</span></td>
+    </tr>`;
+  }).join('');
 
   // Chart: por semestre x turno
   const semList = [...new Set(data.map(r => r[COL.semestre]))].filter(Boolean).sort();
@@ -720,13 +765,14 @@ function renderAll(data) {
     font: { family: fontFamily, color: TEXT }
   }, PLOTLY_CONFIG);
 
-  // Tabla planteles
+  // Tabla planteles (ordenada por % de riesgo, independiente del orden por FINAL)
+  const plantelByRiesgo = [...plantelData].sort((a, b) => b.pctVal - a.pctVal);
   const tbody = document.getElementById('tabla-planteles');
-  tbody.innerHTML = plantelData.slice(0, 12).map((d, i) => {
+  tbody.innerHTML = plantelByRiesgo.slice(0, 12).map((d, i) => {
     const pctv = d.pctVal;
     const riesgo = pctv >= 10 ? 'alto' : pctv >= 5 ? 'medio' : 'bajo';
     const rLabel = pctv >= 10 ? 'Alto' : pctv >= 5 ? 'Medio' : 'Bajo';
-    const maxPct = plantelData[0].pctVal;
+    const maxPct = plantelByRiesgo[0].pctVal;
     const barW = Math.round(pctv/maxPct*100);
     return `<tr>
       <td class="rank-num">${i+1}</td>
@@ -787,16 +833,28 @@ function groupBy(arr, key) {
 function detectCols(row) {
   const keys = Object.keys(row);
   const find = (...cands) => keys.find(k => cands.some(c => k.toLowerCase().includes(c))) || null;
+  const findExact = (name) => keys.find(k => k.toLowerCase() === name.toLowerCase()) || null;
+
+  // La clave/código de la materia suele venir en una columna tipo "cve_materia"
+  const claveMateria = find('cve_materia','clave_materia','id_materia','cvemateria');
+  // El nombre descriptivo: preferir una columna llamada EXACTAMENTE "materia"
+  // (para no confundirla con "cve_materia"); si no existe, buscar variantes de nombre.
+  const nombreMateria = findExact('materia')
+    || find('nombre_materia','nombre_asignatura','desc_materia','descripcion_materia','asignatura')
+    || find('materia'); // respaldo final si no hay una columna exacta
+
   return {
     plantel:   find('plantel','centro'),
     matricula: find('matricula','matrícula','mat','alumno'),
     semestre:  find('semestre','sem'),
     turno:     find('turno'),
     genero:    find('genero','género','sexo'),
-    materia:   find('materia'),
+    materia:       nombreMateria,
+    materiaClave:  claveMateria,
     cal1:      find('cal_1','cal1','p1','parcial1','parcial_1'),
     cal2:      find('cal_2','cal2','p2','parcial2','parcial_2'),
     cal3:      find('cal_3','cal3','p3','parcial3','parcial_3'),
+    promUni:   find('prom_uni','promuni','prom_unidad','promedio_unidad'),
     semestral: find('semestral'),
     proyecto:  find('proyecto','proy'),
     final:     find('final','calif_final','calificacion_final','nota_final'),
