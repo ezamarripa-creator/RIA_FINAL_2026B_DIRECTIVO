@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+
+    <script>
+    (function() {
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            return false;
+        });
+      
+       document.addEventListener('keydown', function(e) {
+            const key = e.key.toLowerCase();
+            if ((e.ctrlKey && (key === 'u' || key === 's' || key === 'c' || key === 'i' || key === 'j')) ||
+                (e.ctrlKey && e.shiftKey && (key === 'i' || key === 'j' || key === 'c')) ||
+                e.key === 'F12') {
+                e.preventDefault();
+                return false;
+            }
+        });
+        
+        let devtoolsTriggered = false;
+        setInterval(function() {
+            if (devtoolsTriggered) return;
+            const before = new Date();
+            debugger; 
+            const after = new Date();
+            if (after - before > 100) { 
+                devtoolsTriggered = true;
+                document.body.innerHTML = '<div style="text-align:center; padding:50px; font-family:sans-serif;"><h1 style="color:#042C53;">⚠️ Acceso no autorizado</h1><p>El uso de herramientas de desarrollo no está permitido en este recurso institucional.</p><p style="font-size:14px; margin-top:30px;">🔒 COBAED · Dirección Académica</p></div>';
+            }
+        }, 2000);
+        
+        const style = document.createElement('style');
+        style.textContent = `body { user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; }`;
+        document.head.appendChild(style);
+    })();
+    </script>
+
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cuadro de Mando — Reprobación RIA 2026B | COBAED</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap');
+
+  :root {
+    --bg:       #0d1117;
+    --surface:  #161b22;
+    --surface2: #1c2330;
+    --border:   #30363d;
+    --accent:   #f78166;
+    --accent2:  #58a6ff;
+    --accent3:  #3fb950;
+    --warn:     #d29922;
+    --danger:   #f85149;
+    --text:     #e6edf3;
+    --muted:    #8b949e;
+    --card-r:   10px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 14px; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo-area { display: flex; align-items: center; gap: 12px; }
+  .logo-badge {
+    background: linear-gradient(135deg, var(--accent), #ff9f7f);
+    border-radius: 8px;
+    width: 38px; height: 38px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 700; color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    flex-shrink: 0;
+  }
+  .header-titles h1 {
+    font-size: 1rem; font-weight: 600; letter-spacing: 0.01em;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .header-titles p { font-size: 0.75rem; color: var(--muted); margin-top: 1px; }
+  .header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+  #semestre-badge {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  #semestre-badge span { color: var(--accent2); font-weight: 600; }
+
+  /* ── SYNC BUTTON ── */
+  .sync-btn {
+    background: linear-gradient(135deg, #1a7f37, var(--accent3));
+    border: none;
+    border-radius: 7px;
+    padding: 8px 16px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #fff;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 7px;
+    transition: opacity .15s;
+  }
+  .sync-btn:hover { opacity: .88; }
+  .sync-btn:disabled { opacity: .5; cursor: not-allowed; }
+  .sync-btn .spin { animation: spin .7s linear infinite; display: inline-block; }
+  #last-sync { font-size: 0.7rem; color: var(--muted); white-space: nowrap; }
+
+  /* ── FILTERS ── */
+  #filter-bar {
+    padding: 10px 28px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  }
+  #filter-bar label { font-size: 0.72rem; color: var(--muted); margin-right: 4px; }
+  select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 5px 10px;
+    font-size: 0.78rem;
+    cursor: pointer;
+    outline: none;
+    transition: border-color .15s;
+  }
+  select:focus { border-color: var(--accent2); }
+  .filter-group { display: flex; align-items: center; gap: 6px; }
+
+  /* ── MAIN GRID ── */
+  main { padding: 22px 28px; }
+
+  /* ── KPI ROW ── */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    margin-bottom: 22px;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--card-r);
+    padding: 16px 18px;
+    position: relative;
+    overflow: hidden;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,0,0,.35); }
+  .kpi-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  }
+  .kpi-card.blue::before  { background: var(--accent2); }
+  .kpi-card.orange::before{ background: var(--accent); }
+  .kpi-card.green::before { background: var(--accent3); }
+  .kpi-card.warn::before  { background: var(--warn); }
+  .kpi-card.red::before   { background: var(--danger); }
+  .kpi-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .kpi-value { font-size: 2rem; font-weight: 700; font-family: 'DM Sans', sans-serif; margin: 4px 0 2px; line-height: 1; }
+  .kpi-card.blue .kpi-value  { color: var(--accent2); }
+  .kpi-card.orange .kpi-value{ color: var(--accent); }
+  .kpi-card.green .kpi-value { color: var(--accent3); }
+  .kpi-card.warn .kpi-value  { color: var(--warn); }
+  .kpi-card.red .kpi-value   { color: var(--danger); }
+  .kpi-sub { font-size: 0.72rem; color: var(--muted); }
+
+  /* ── PARCIALES ROW ── */
+  .parciales-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+    margin-bottom: 22px;
+  }
+  .parcial-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--card-r);
+    padding: 14px 16px;
+    text-align: center;
+  }
+  .parcial-title {
+    font-size: 0.68rem; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px;
+  }
+  .parcial-pct {
+    font-size: 1.6rem; font-weight: 700;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--accent);
+  }
+  .parcial-count { font-size: 0.72rem; color: var(--muted); margin-top: 3px; }
+
+  /* ── CHARTS GRID ── */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .charts-grid.wide { grid-template-columns: 1fr; }
+  @media (max-width: 820px) { .charts-grid { grid-template-columns: 1fr; } }
+
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--card-r);
+    padding: 18px;
+  }
+  .chart-title {
+    font-size: 0.78rem; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .05em; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .chart-title .dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+
+  /* ── TOP TABLE ── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+  thead tr { border-bottom: 1px solid var(--border); }
+  th { text-align: left; padding: 7px 10px; color: var(--muted); font-weight: 500; font-size: 0.7rem; text-transform: uppercase; letter-spacing: .05em; }
+  td { padding: 8px 10px; border-bottom: 1px solid rgba(48,54,61,.5); }
+  tr:hover td { background: var(--surface2); }
+  .rank-num { color: var(--muted); font-size: 0.72rem; }
+  .bar-cell { display: flex; align-items: center; gap: 8px; }
+  .mini-bar { height: 6px; border-radius: 3px; background: var(--accent); opacity: .8; }
+  .pct-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 20px;
+    font-size: 0.7rem; font-weight: 600;
+  }
+  .pct-badge.alto   { background: rgba(248,81,73,.15); color: var(--danger); }
+  .pct-badge.medio  { background: rgba(210,153,34,.15); color: var(--warn); }
+  .pct-badge.bajo   { background: rgba(63,185,80,.15); color: var(--accent3); }
+
+  /* ── EMPTY STATE ── */
+  #empty-state {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 62vh; gap: 16px; text-align: center;
+  }
+  .empty-icon { font-size: 4rem; opacity: .3; }
+  #empty-state h2 { font-size: 1.1rem; color: var(--muted); font-weight: 500; }
+  #empty-state p { font-size: 0.82rem; color: var(--muted); opacity: .7; max-width: 320px; }
+  .empty-sync-btn {
+    background: linear-gradient(135deg, #1a7f37, var(--accent3));
+    border: none; border-radius: 8px; padding: 11px 22px;
+    font-size: 0.88rem; font-weight: 600; color: #fff; cursor: pointer;
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 6px; transition: opacity .15s;
+  }
+  .empty-sync-btn:hover { opacity: .88; }
+  .empty-sync-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  #dashboard { display: none; }
+  .loading-overlay {
+    position: fixed; inset: 0; background: rgba(13,17,23,.85);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 999; flex-direction: column; gap: 14px;
+  }
+  .spinner {
+    width: 36px; height: 36px; border: 3px solid var(--border);
+    border-top-color: var(--accent2); border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-overlay p { color: var(--muted); font-size: 0.82rem; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo-area">
+    <div class="logo-badge">C</div>
+    <div class="header-titles">
+      <h1>Cuadro de Mando Integral · Índices de Reprobación</h1>
+      <p>COBAED — Sistema de Evaluación RIA</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div id="semestre-badge">Semestre: <span id="hdr-semestre">—</span></div>
+    <span id="last-sync"></span>
+    <button class="sync-btn" id="sync-btn" onclick="syncDrive()">
+      <span id="sync-icon">🔄</span> Sincronizar
+    </button>
+  </div>
+</header>
+
+<!-- FILTER BAR -->
+<div id="filter-bar" style="display:none;">
+  <div class="filter-group">
+    <label>Plantel</label>
+    <select id="f-plantel" onchange="applyFilters()"><option value="">Todos</option></select>
+  </div>
+  <div class="filter-group">
+    <label>Turno</label>
+    <select id="f-turno" onchange="applyFilters()">
+      <option value="">Ambos</option>
+      <option value="1">Matutino</option>
+      <option value="2">Vespertino</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Semestre</label>
+    <select id="f-semestre" onchange="applyFilters()"><option value="">Todos</option></select>
+  </div>
+  <div class="filter-group">
+    <label>Género</label>
+    <select id="f-genero" onchange="applyFilters()">
+      <option value="">Todos</option>
+      <option value="1">Masculino</option>
+      <option value="2">Femenino</option>
+    </select>
+  </div>
+</div>
+
+<!-- EMPTY STATE -->
+<div id="empty-state">
+  <div class="empty-icon">📊</div>
+  <h2>Conectando con Google Drive…</h2>
+  <p>El dashboard se sincroniza automáticamente con el archivo compartido de COBAED. Si no carga, usa el botón de abajo.</p>
+  <button class="empty-sync-btn" id="empty-sync-btn" onclick="syncDrive()">
+    🔄 Sincronizar ahora
+  </button>
+  <p id="empty-error" style="color:var(--danger);font-size:.78rem;margin-top:10px;display:none;"></p>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+<main>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi-card blue">
+      <div class="kpi-label">Matrícula</div>
+      <div class="kpi-value" id="kpi-matricula">—</div>
+      <div class="kpi-sub">alumnos únicos</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-label">Materias Evaluadas</div>
+      <div class="kpi-value" id="kpi-materias">—</div>
+      <div class="kpi-sub">registros totales</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-label">Reprobación Final</div>
+      <div class="kpi-value" id="kpi-rep-pct">—</div>
+      <div class="kpi-sub" id="kpi-rep-abs">materias reprobadas</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">Aprobación Final</div>
+      <div class="kpi-value" id="kpi-apr-pct">—</div>
+      <div class="kpi-sub" id="kpi-apr-abs">materias aprobadas</div>
+    </div>
+    <div class="kpi-card warn">
+      <div class="kpi-label">Planteles</div>
+      <div class="kpi-value" id="kpi-planteles">—</div>
+      <div class="kpi-sub">planteles activos</div>
+    </div>
+  </div>
+
+  <!-- PARCIALES -->
+  <div class="parciales-row" id="parciales-row">
+    <div class="parcial-card">
+      <div class="parcial-title">Parcial 1 <span style="color:var(--muted);font-size:.65rem">(< 6)</span></div>
+      <div class="parcial-pct" id="p1-pct">—</div>
+      <div class="parcial-count" id="p1-cnt">—</div>
+    </div>
+    <div class="parcial-card">
+      <div class="parcial-title">Parcial 2 <span style="color:var(--muted);font-size:.65rem">(< 6)</span></div>
+      <div class="parcial-pct" id="p2-pct">—</div>
+      <div class="parcial-count" id="p2-cnt">—</div>
+    </div>
+    <div class="parcial-card">
+      <div class="parcial-title">Parcial 3 <span style="color:var(--muted);font-size:.65rem">(< 6)</span></div>
+      <div class="parcial-pct" id="p3-pct">—</div>
+      <div class="parcial-count" id="p3-cnt">—</div>
+    </div>
+    <div class="parcial-card">
+      <div class="parcial-title">Semestral <span style="color:var(--muted);font-size:.65rem">(< 0.9)</span></div>
+      <div class="parcial-pct" id="ps-pct">—</div>
+      <div class="parcial-count" id="ps-cnt">—</div>
+    </div>
+    <div class="parcial-card">
+      <div class="parcial-title">Proyecto Int. <span style="color:var(--muted);font-size:.65rem">(< 1.5)</span></div>
+      <div class="parcial-pct" id="pp-pct">—</div>
+      <div class="parcial-count" id="pp-cnt">—</div>
+    </div>
+    <div class="parcial-card">
+      <div class="parcial-title">Final <span style="color:var(--muted);font-size:.65rem">(< 6)</span></div>
+      <div class="parcial-pct" id="pf-pct" style="color:var(--danger)">—</div>
+      <div class="parcial-count" id="pf-cnt">—</div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW 1 -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-title"><span class="dot" style="background:var(--danger)"></span>Reprobación por Plantel (%)</div>
+      <div id="chart-plantel" style="height:340px;"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title"><span class="dot" style="background:var(--accent2)"></span>Distribución de Calificaciones Finales</div>
+      <div id="chart-dist" style="height:340px;"></div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW 2 -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-title"><span class="dot" style="background:var(--warn)"></span>Top 10 Materias con Mayor Reprobación</div>
+      <div id="chart-materias" style="height:340px;"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title"><span class="dot" style="background:var(--accent3)"></span>Reprobación por Semestre y Turno</div>
+      <div id="chart-semturno" style="height:340px;"></div>
+    </div>
+  </div>
+
+  <!-- BOTTOM: TABLE + GENDER CHART -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-title"><span class="dot" style="background:var(--accent)"></span>Planteles con Mayor Riesgo</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Plantel</th>
+              <th>Total</th>
+              <th>Reprobados</th>
+              <th>% Rep.</th>
+              <th>Riesgo</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-planteles"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title"><span class="dot" style="background:#bc8cff)"></span>Reprobación por Género</div>
+      <div id="chart-genero" style="height:300px;"></div>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<!-- LOADING OVERLAY -->
+<div class="loading-overlay" id="loading" style="display:none;">
+  <div class="spinner"></div>
+  <p>Procesando datos…</p>
+</div>
+
+<script>
+let rawData = [];
+
+const PLOTLY_CONFIG = { responsive: true, displayModeBar: false };
+const BG = 'rgba(0,0,0,0)';
+const GRID = '#30363d';
+const TEXT = '#8b949e';
+const fontFamily = 'Inter, system-ui, sans-serif';
+
+const DRIVE_FILE_ID = '1KR69fAwacLOGSxNLYHmtYagGDP9Sk9iD';
+// Google Sheets export URL — permite CORS desde cualquier origen cuando el archivo es público
+const DRIVE_URL = `https://docs.google.com/spreadsheets/d/${DRIVE_FILE_ID}/export?format=xlsx&single=true`;
+
+async function syncDrive() {
+  const btn      = document.getElementById('sync-btn');
+  const emptyBtn = document.getElementById('empty-sync-btn');
+  const errEl    = document.getElementById('empty-error');
+  const lastEl   = document.getElementById('last-sync');
+  const loadEl   = document.getElementById('loading');
+  const iconEl   = document.getElementById('sync-icon');
+
+  if (btn)      { btn.disabled = true; iconEl.textContent = '⏳'; iconEl.classList.add('spin'); }
+  if (emptyBtn) { emptyBtn.disabled = true; emptyBtn.textContent = '⏳ Sincronizando…'; }
+  if (errEl)    errEl.style.display = 'none';
+  loadEl.style.display = 'flex';
+  document.querySelector('#loading p').textContent = 'Descargando datos desde Google Drive…';
+
+  try {
+    const response = await fetch(DRIVE_URL);
+    if (!response.ok) throw new Error(`HTTP ${response.status} — ${response.statusText}`);
+
+    const buffer = await response.arrayBuffer();
+    const wb = XLSX.read(buffer, { type: 'array' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const json = XLSX.utils.sheet_to_json(ws, { defval: null });
+
+    if (!json.length) throw new Error('El archivo no contiene datos en la primera hoja.');
+
+    rawData = json;
+    populateFilters(json);
+    renderAll(json);
+
+    document.getElementById('empty-state').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    document.getElementById('filter-bar').style.display = 'flex';
+
+    const now = new Date().toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+    if (lastEl) lastEl.textContent = `Actualizado: ${now}`;
+    if (iconEl) { iconEl.textContent = '✅'; iconEl.classList.remove('spin'); }
+    setTimeout(() => { if (iconEl) iconEl.textContent = '🔄'; }, 2500);
+
+  } catch (err) {
+    console.error('Sync error:', err);
+    document.querySelector('#empty-state h2').textContent = 'No se pudo sincronizar';
+    document.querySelector('#empty-state p').textContent =
+      'Verifica que el archivo esté compartido como "Cualquier persona con el vínculo puede ver".';
+    if (errEl) {
+      errEl.textContent = `Error: ${err.message}`;
+      errEl.style.display = 'block';
+    }
+    if (iconEl) { iconEl.textContent = '❌'; iconEl.classList.remove('spin'); }
+    setTimeout(() => { if (iconEl) iconEl.textContent = '🔄'; }, 3000);
+  } finally {
+    loadEl.style.display = 'none';
+    if (btn)      btn.disabled = false;
+    if (emptyBtn) { emptyBtn.disabled = false; emptyBtn.innerHTML = '🔄 Sincronizar ahora'; }
+  }
+}
+
+// Auto-sincronizar al cargar la página
+window.addEventListener('DOMContentLoaded', () => syncDrive());
+
+function populateFilters(data) {
+  const planteles = [...new Set(data.map(r => r.plantel))].filter(Boolean).sort();
+  const semestres = [...new Set(data.map(r => r.semestre))].filter(Boolean).sort();
+  const fp = document.getElementById('f-plantel');
+  fp.innerHTML = '<option value="">Todos</option>' +
+    planteles.map(p => `<option value="${p}">${p}</option>`).join('');
+  const fs = document.getElementById('f-semestre');
+  fs.innerHTML = '<option value="">Todos</option>' +
+    semestres.map(s => `<option value="${s}">${s}°</option>`).join('');
+}
+
+function applyFilters() {
+  const fp = document.getElementById('f-plantel').value;
+  const ft = document.getElementById('f-turno').value;
+  const fs = document.getElementById('f-semestre').value;
+  const fg = document.getElementById('f-genero').value;
+  let d = rawData;
+  if (fp) d = d.filter(r => r.plantel === fp);
+  if (ft) d = d.filter(r => String(r.turno) === ft);
+  if (fs) d = d.filter(r => String(r.semestre) === fs);
+  if (fg) d = d.filter(r => String(r.genero) === fg);
+  renderAll(d);
+}
+
+function renderAll(data) {
+  // Detect column names
+  const COL = detectCols(data[0] || {});
+
+  // Semester label
+  const sheetData = rawData;
+  const semUniq = [...new Set(sheetData.map(r => r.semestre))].filter(Boolean).sort();
+  document.getElementById('hdr-semestre').textContent = semUniq.join(', ') + '°';
+
+  // Reprobado = final < 6
+  const total = data.length;
+  const reprobados = data.filter(r => parseFloat(r[COL.final]) < 6);
+  const aprobados = data.filter(r => parseFloat(r[COL.final]) >= 6);
+  const alumUniq = new Set(data.map(r => r[COL.matricula])).size;
+  const plantUniq = new Set(data.map(r => r[COL.plantel])).size;
+
+  // KPIs
+  document.getElementById('kpi-matricula').textContent  = alumUniq.toLocaleString('es-MX');
+  document.getElementById('kpi-materias').textContent   = total.toLocaleString('es-MX');
+  document.getElementById('kpi-rep-pct').textContent    = pct(reprobados.length, total);
+  document.getElementById('kpi-rep-abs').textContent    = reprobados.length.toLocaleString('es-MX') + ' materias';
+  document.getElementById('kpi-apr-pct').textContent    = pct(aprobados.length, total);
+  document.getElementById('kpi-apr-abs').textContent    = aprobados.length.toLocaleString('es-MX') + ' materias';
+  document.getElementById('kpi-planteles').textContent  = plantUniq;
+
+  // Parciales — umbral por tipo de evaluación:
+  //   cal_1 / cal_2 / cal_3 / final : < 6
+  //   semestral                      : < 0.9
+  //   proyecto                       : < 1.5
+  const parcCols = [
+    { id: 'p1', col: COL.cal1,      threshold: 6   },
+    { id: 'p2', col: COL.cal2,      threshold: 6   },
+    { id: 'p3', col: COL.cal3,      threshold: 6   },
+    { id: 'ps', col: COL.semestral, threshold: 0.9 },
+    { id: 'pp', col: COL.proyecto,  threshold: 1.5 },
+    { id: 'pf', col: COL.final,     threshold: 6   },
+  ];
+  for (const { id, col, threshold } of parcCols) {
+    if (!col) continue;
+    const valid = data.filter(r => r[col] !== null && r[col] !== undefined && !isNaN(parseFloat(r[col])));
+    const rep   = valid.filter(r => parseFloat(r[col]) < threshold);
+    document.getElementById(`${id}-pct`).textContent = pct(rep.length, valid.length);
+    document.getElementById(`${id}-cnt`).textContent =
+      rep.length.toLocaleString('es-MX') + ' / ' + valid.length.toLocaleString('es-MX');
+  }
+
+  // Chart: reprobación por plantel
+  const byPlantel = groupBy(data, COL.plantel);
+  const plantelData = Object.entries(byPlantel).map(([name, rows]) => {
+    const rep = rows.filter(r => parseFloat(r[COL.final]) < 6).length;
+    return { name, total: rows.length, rep, pctVal: rows.length ? rep/rows.length*100 : 0 };
+  }).sort((a,b) => b.pctVal - a.pctVal);
+
+  Plotly.newPlot('chart-plantel', [{
+    type: 'bar', orientation: 'h',
+    y: plantelData.map(d => d.name),
+    x: plantelData.map(d => +d.pctVal.toFixed(2)),
+    marker: {
+      color: plantelData.map(d =>
+        d.pctVal >= 10 ? '#f85149' : d.pctVal >= 5 ? '#d29922' : '#3fb950'
+      )
+    },
+    text: plantelData.map(d => d.pctVal.toFixed(1) + '%'),
+    textposition: 'outside',
+    hovertemplate: '<b>%{y}</b><br>Reprobación: %{x:.1f}%<extra></extra>'
+  }], {
+    paper_bgcolor: BG, plot_bgcolor: BG,
+    margin: { l: 150, r: 50, t: 10, b: 30 },
+    xaxis: { gridcolor: GRID, color: TEXT, tickfont: { size: 11 }, ticksuffix: '%' },
+    yaxis: { color: TEXT, tickfont: { size: 11 }, automargin: true },
+    font: { family: fontFamily, color: TEXT }
+  }, PLOTLY_CONFIG);
+
+  // Chart: distribución calificaciones
+  const finalVals = data.map(r => parseFloat(r[COL.final])).filter(v => !isNaN(v));
+  const countByNote = {};
+  for (let n = 5; n <= 10; n++) countByNote[n] = 0;
+  finalVals.forEach(v => { const k = Math.round(v); if (countByNote[k] !== undefined) countByNote[k]++; });
+  const notes = Object.keys(countByNote).map(Number);
+  const counts = notes.map(n => countByNote[n]);
+  Plotly.newPlot('chart-dist', [{
+    type: 'bar',
+    x: notes.map(n => n + ''),
+    y: counts,
+    marker: {
+      color: notes.map(n => n < 6 ? '#f85149' : n < 8 ? '#d29922' : '#3fb950'),
+      line: { width: 0 }
+    },
+    text: counts.map(c => c.toLocaleString('es-MX')),
+    textposition: 'outside',
+    hovertemplate: 'Calificación %{x}<br>Alumnos: %{y}<extra></extra>'
+  }], {
+    paper_bgcolor: BG, plot_bgcolor: BG,
+    margin: { l: 50, r: 20, t: 20, b: 40 },
+    xaxis: { color: TEXT, tickfont: { size: 12 }, gridcolor: GRID, title: { text: 'Calificación', font: { size: 11 } } },
+    yaxis: { gridcolor: GRID, color: TEXT, tickfont: { size: 11 } },
+    font: { family: fontFamily, color: TEXT }
+  }, PLOTLY_CONFIG);
+
+  // Chart: Top 10 materias reprobadas
+  const byMateria = groupBy(reprobados, COL.materia);
+  const materiaTop = Object.entries(byMateria)
+    .map(([name, rows]) => ({ name, count: rows.length }))
+    .sort((a,b) => b.count - a.count).slice(0, 10);
+
+  Plotly.newPlot('chart-materias', [{
+    type: 'bar', orientation: 'h',
+    y: materiaTop.map(d => d.name),
+    x: materiaTop.map(d => d.count),
+    marker: { color: '#d29922' },
+    text: materiaTop.map(d => d.count),
+    textposition: 'outside',
+    hovertemplate: '<b>%{y}</b><br>Reprobados: %{x}<extra></extra>'
+  }], {
+    paper_bgcolor: BG, plot_bgcolor: BG,
+    margin: { l: 230, r: 50, t: 10, b: 30 },
+    xaxis: { gridcolor: GRID, color: TEXT, tickfont: { size: 11 } },
+    yaxis: { color: TEXT, tickfont: { size: 11 }, automargin: true },
+    font: { family: fontFamily, color: TEXT }
+  }, PLOTLY_CONFIG);
+
+  // Chart: por semestre x turno
+  const semList = [...new Set(data.map(r => r[COL.semestre]))].filter(Boolean).sort();
+  const turnoLabels = { '1': 'Matutino', '2': 'Vespertino' };
+  const traces = ['1','2'].map(t => {
+    const color = t === '1' ? '#58a6ff' : '#f78166';
+    return {
+      name: turnoLabels[t],
+      type: 'bar',
+      x: semList.map(s => s + '° Sem.'),
+      y: semList.map(s => {
+        const rows = data.filter(r => String(r[COL.semestre]) === String(s) && String(r[COL.turno]) === t);
+        const rep = rows.filter(r => parseFloat(r[COL.final]) < 6);
+        return rows.length ? +(rep.length/rows.length*100).toFixed(2) : 0;
+      }),
+      marker: { color },
+      hovertemplate: '%{x} %{fullData.name}<br>%{y:.1f}%<extra></extra>'
+    };
+  });
+  Plotly.newPlot('chart-semturno', traces, {
+    paper_bgcolor: BG, plot_bgcolor: BG,
+    barmode: 'group',
+    margin: { l: 50, r: 20, t: 10, b: 50 },
+    xaxis: { color: TEXT, tickfont: { size: 11 }, gridcolor: GRID },
+    yaxis: { gridcolor: GRID, color: TEXT, tickfont: { size: 11 }, ticksuffix: '%' },
+    legend: { font: { color: TEXT, size: 11 }, bgcolor: 'rgba(0,0,0,0)' },
+    font: { family: fontFamily, color: TEXT }
+  }, PLOTLY_CONFIG);
+
+  // Tabla planteles
+  const tbody = document.getElementById('tabla-planteles');
+  tbody.innerHTML = plantelData.slice(0, 12).map((d, i) => {
+    const pctv = d.pctVal;
+    const riesgo = pctv >= 10 ? 'alto' : pctv >= 5 ? 'medio' : 'bajo';
+    const rLabel = pctv >= 10 ? 'Alto' : pctv >= 5 ? 'Medio' : 'Bajo';
+    const maxPct = plantelData[0].pctVal;
+    const barW = Math.round(pctv/maxPct*100);
+    return `<tr>
+      <td class="rank-num">${i+1}</td>
+      <td>${d.name}</td>
+      <td>${d.total.toLocaleString('es-MX')}</td>
+      <td>${d.rep.toLocaleString('es-MX')}</td>
+      <td>
+        <div class="bar-cell">
+          <div class="mini-bar" style="width:${barW}px;background:${pctv>=10?'var(--danger)':pctv>=5?'var(--warn)':'var(--accent3)'}"></div>
+          ${pctv.toFixed(1)}%
+        </div>
+      </td>
+      <td><span class="pct-badge ${riesgo}">${rLabel}</span></td>
+    </tr>`;
+  }).join('');
+
+  // Chart género
+  const genLabels = { '1': 'Masculino', '2': 'Femenino' };
+  const genColors = { '1': '#58a6ff', '2': '#f78166' };
+  const genData = ['1','2'].map(g => {
+    const rows = data.filter(r => String(r[COL.genero]) === g);
+    const rep = rows.filter(r => parseFloat(r[COL.final]) < 6);
+    return { gen: genLabels[g] || g, total: rows.length, rep: rep.length, pctV: rows.length ? rep.length/rows.length*100 : 0 };
+  });
+  Plotly.newPlot('chart-genero', [{
+    type: 'pie',
+    labels: genData.map(d => d.gen),
+    values: genData.map(d => d.rep),
+    hole: .5,
+    marker: { colors: ['#58a6ff','#f78166'], line: { color: '#161b22', width: 3 } },
+    textinfo: 'label+percent',
+    textfont: { size: 12, color: '#e6edf3' },
+    hovertemplate: '<b>%{label}</b><br>Reprobados: %{value}<br>%{percent}<extra></extra>'
+  }], {
+    paper_bgcolor: BG, plot_bgcolor: BG,
+    margin: { l: 20, r: 20, t: 20, b: 20 },
+    legend: { font: { color: TEXT }, bgcolor: 'rgba(0,0,0,0)' },
+    font: { family: fontFamily, color: TEXT },
+    annotations: [{
+      text: 'por<br>Género',
+      x: .5, y: .5, showarrow: false,
+      font: { size: 12, color: TEXT }
+    }]
+  }, PLOTLY_CONFIG);
+}
+
+// ── helpers ──
+function pct(a, b) { return b ? (a/b*100).toFixed(1) + '%' : '0.0%'; }
+function groupBy(arr, key) {
+  return arr.reduce((acc, r) => {
+    const k = r[key] ?? 'Sin dato';
+    if (!acc[k]) acc[k] = [];
+    acc[k].push(r);
+    return acc;
+  }, {});
+}
+
+function detectCols(row) {
+  const keys = Object.keys(row);
+  const find = (...cands) => keys.find(k => cands.some(c => k.toLowerCase().includes(c))) || null;
+  return {
+    plantel:   find('plantel','centro'),
+    matricula: find('matricula','matrícula','mat','alumno'),
+    semestre:  find('semestre','sem'),
+    turno:     find('turno'),
+    genero:    find('genero','género','sexo'),
+    materia:   find('materia'),
+    cal1:      find('cal_1','cal1','p1','parcial1','parcial_1'),
+    cal2:      find('cal_2','cal2','p2','parcial2','parcial_2'),
+    cal3:      find('cal_3','cal3','p3','parcial3','parcial_3'),
+    semestral: find('semestral'),
+    proyecto:  find('proyecto','proy'),
+    final:     find('final','calif_final','calificacion_final','nota_final'),
+  };
+}
+
+
+</script>
+</body>
+</html>
