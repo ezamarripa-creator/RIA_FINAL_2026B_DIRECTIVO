@@ -371,9 +371,9 @@
       <div class="kpi-sub" id="kpi-rep-abs">materias reprobadas</div>
     </div>
     <div class="kpi-card green">
-      <div class="kpi-label">Aprobación Final</div>
-      <div class="kpi-value" id="kpi-apr-pct">—</div>
-      <div class="kpi-sub" id="kpi-apr-abs">materias aprobadas</div>
+      <div class="kpi-label">Promedio Final (Rendimiento Académico)</div>
+      <div class="kpi-value" id="kpi-promedio-final">—</div>
+      <div class="kpi-sub" id="kpi-promedio-sub">calificación promedio</div>
     </div>
     <div class="kpi-card warn">
       <div class="kpi-label">Planteles</div>
@@ -613,13 +613,17 @@ function renderAll(data) {
   const alumUniq = new Set(data.map(r => r[COL.matricula])).size;
   const plantUniq = new Set(data.map(r => r[COL.plantel])).size;
 
+  // Calcular promedio final
+  const finalVals = data.map(r => parseFloat(r[COL.final])).filter(v => !isNaN(v));
+  const promedioFinal = finalVals.length > 0 ? finalVals.reduce((a, b) => a + b, 0) / finalVals.length : 0;
+
   // KPIs
   document.getElementById('kpi-matricula').textContent  = alumUniq.toLocaleString('es-MX');
   document.getElementById('kpi-materias').textContent   = total.toLocaleString('es-MX');
   document.getElementById('kpi-rep-pct').textContent    = pct(reprobados.length, total);
   document.getElementById('kpi-rep-abs').textContent    = reprobados.length.toLocaleString('es-MX') + ' materias';
-  document.getElementById('kpi-apr-pct').textContent    = pct(aprobados.length, total);
-  document.getElementById('kpi-apr-abs').textContent    = aprobados.length.toLocaleString('es-MX') + ' materias';
+  document.getElementById('kpi-promedio-final').textContent = promedioFinal.toFixed(1);
+  document.getElementById('kpi-promedio-sub').textContent = 'calificación promedio';
   document.getElementById('kpi-planteles').textContent  = plantUniq;
 
   // Parciales — umbral por tipo de evaluación:
@@ -685,10 +689,10 @@ function renderAll(data) {
     </tr>`).join('');
 
   // Chart: distribución calificaciones
-  const finalVals = data.map(r => parseFloat(r[COL.final])).filter(v => !isNaN(v));
+  const finalValsChart = data.map(r => parseFloat(r[COL.final])).filter(v => !isNaN(v));
   const countByNote = {};
   for (let n = 5; n <= 10; n++) countByNote[n] = 0;
-  finalVals.forEach(v => { const k = Math.round(v); if (countByNote[k] !== undefined) countByNote[k]++; });
+  finalValsChart.forEach(v => { const k = Math.round(v); if (countByNote[k] !== undefined) countByNote[k]++; });
   const notes = Object.keys(countByNote).map(Number);
   const counts = notes.map(n => countByNote[n]);
   Plotly.newPlot('chart-dist', [{
