@@ -39,8 +39,8 @@
 
 
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cuadro de Mando — Reprobación RIA 2025B | COBAED</title>
+<meta name="viewport" content="width=device-width, initial-scale=2.0">
+<title>Cuadro de Mando — Reprobación RIA 2026B | COBAED</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
 <style>
@@ -298,7 +298,7 @@
     <div class="logo-badge">C</div>
     <div class="header-titles">
       <h1>Cuadro de Mando Integral · Índices de Reprobación</h1>
-      <p>COBAED — Sistema de Evaluación RIA 2025B</p>
+      <p>COBAED — Sistema de Evaluación RIA 2026B</p>
     </div>
   </div>
   <div class="header-right">
@@ -400,12 +400,12 @@
       <div class="parcial-count" id="p3-cnt">—</div>
     </div>
     <div class="parcial-card">
-      <div class="parcial-title">Semestral <span style="color:var(--muted);font-size:.65rem">(< 0.9)</span></div>
+      <div class="parcial-title">Semestral <span style="color:var(--muted);font-size:.65rem">(< 6)</span></div>
       <div class="parcial-pct" id="ps-pct">—</div>
       <div class="parcial-count" id="ps-cnt">—</div>
     </div>
     <div class="parcial-card">
-      <div class="parcial-title">Proyecto Int. <span style="color:var(--muted);font-size:.65rem">(< 1.5)</span></div>
+      <div class="parcial-title">Proyecto Int. <span style="color:var(--muted);font-size:.65rem">(< 6)</span></div>
       <div class="parcial-pct" id="pp-pct">—</div>
       <div class="parcial-count" id="pp-cnt">—</div>
     </div>
@@ -510,7 +510,7 @@ const GRID = '#30363d';
 const TEXT = '#8b949e';
 const fontFamily = 'Inter, system-ui, sans-serif';
 
-const DRIVE_FILE_ID = '1KR69fAwacLOGSxNLYHmtYagGDP9Sk9iD';
+const DRIVE_FILE_ID = '1VWEmCIdthblgDjv7rRpo1tZo5OUtJchR';
 // Google Sheets export URL — permite CORS desde cualquier origen cuando el archivo es público
 const DRIVE_URL = `https://docs.google.com/spreadsheets/d/${DRIVE_FILE_ID}/export?format=xlsx&single=true`;
 
@@ -630,8 +630,8 @@ function renderAll(data) {
     { id: 'p1', col: COL.cal1,      threshold: 6   },
     { id: 'p2', col: COL.cal2,      threshold: 6   },
     { id: 'p3', col: COL.cal3,      threshold: 6   },
-    { id: 'ps', col: COL.semestral, threshold: 0.9 },
-    { id: 'pp', col: COL.proyecto,  threshold: 1.5 },
+    { id: 'ps', col: COL.semestral, threshold: 6 },
+    { id: 'pp', col: COL.proyecto,  threshold: 6 },
     { id: 'pf', col: COL.final,     threshold: 6   },
   ];
   for (const { id, col, threshold } of parcCols) {
